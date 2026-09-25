@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bio-Medical Sciences Jeopardy</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #050510; 
+            color: white;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        .game-title {
+            color: #FFD700;
+            font-size: 3em;
+            text-align: center;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px #000;
+        }
+
+        .score-display {
+            font-size: 2em;
+            color: #FFD700;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            width: 95vw;
+            max-width: 1400px;
+        }
+
+        .category {
+            background-color: #101030; 
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1em;
+            border: 3px solid #FFD700;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 70px;
+            text-transform: uppercase;
+        }
+
+        .question-cell {
+            background-color: #101030; 
+            color: #FFD700;
+            font-size: 2.5em;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid #202050;
+            border-radius: 15px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .question-cell:hover {
+            background-color: #1a1a4d;
+        }
+
+        .question-cell.answered {
+            background-color: #0d0d25;
+            color: #333355;
+            cursor: not-allowed;
+            border-color: #111;
+        }
+
+        /* MODAL */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #050510;
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #0a0a25; 
+            padding: 40px;
+            border: none; 
+            border-radius: 30px;
+            width: 70vw; 
+            height: 85vh;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #questionText {
+            font-size: 2.2vw; 
+            font-weight: bold;
+            margin-bottom: 30px;
+            line-height: 1.4;
+            color: white;
+            text-shadow: 2px 2px #000;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            width: 90%;
+            justify-items: center;
+        }
+
+        .option-btn {
+            background-color: #151540; 
+            color: white;
+            border: 3px solid #FFD700; 
+            padding: 20px;
+            font-size: 1.8vw;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 20px;
+            transition: 0.2s;
+            width: 100%;
+        }
+
+        .option-btn:hover {
+            background-color: #202060;
+        }
+
+        .correct {
+            background-color: #004d00 !important;
+            border-color: #00FF00 !important;
+        }
+
+        .wrong {
+            background-color: #4d0000 !important;
+            border-color: #FF0000 !important;
+        }
+
+        #closeModal {
+            margin-top: 40px;
+            background-color: #660000;
+            color: white;
+            padding: 15px 30px;
+            border: 3px solid white;
+            cursor: pointer;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-radius: 15px;
+            display: none;
+        }
+
+        #feedbackText {
+            font-size: 3vw;
+            font-weight: bold;
+            margin-top: 20px;
+            height: 60px; 
+            text-transform: uppercase;
+        }
+
+        .final-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #FFD700;
+            color: #000;
+            padding: 15px 25px;
+            font-weight: bold;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 0 15px gold;
+        }
+
+        .reveal-btn {
+            background-color: #FFD700;
+            color: #000;
+            padding: 20px 40px;
+            font-size: 1.5em;
+            font-weight: bold;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1 class="game-title">Bio-Medical Sciences Jeopardy</h1>
+    <div class="score-display">Score: $<span id="score">0</span></div>
+    
+    <div class="game-board" id="gameBoard"></div>
+
+    <button class="final-btn" onclick="openFinal()">Final Jeopardy</button>
+
+    <div class="modal" id="questionModal">
+        <div class="modal-content">
+            <div id="questionText"></div>
+            <div class="options-grid" id="optionsGrid"></div>
+            <button id="closeModal" onclick="closeModal()">RETURN TO BOARD</button>
+            <div id="feedbackText"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentScore = 0;
+
+        const gameData = [
+            {
+                category: "Landmarks",
+                questions: [
+                    { v: 100, q: "Relative to the elbow, the wrist is located in which direction?", a: "Distal", options: ["Proximal", "Distal", "Medial", "Deep"], },
+                    { v: 200, q: "The bridge of the nose is ______ relative to the cheeks.", a: "Medial", options: ["Lateral", "Medial", "Superficial", "Deep"], },
+                    { v: 300, q: "The skin is ______ relative to the skeletal muscles.", a: "Superficial", options: ["Deep", "Superficial", "Proximal", "Lateral"], },
+                    { v: 400, q: "Which term describes structures on the opposite side of the body?", a: "Contralateral", options: ["Ipsilateral", "Contralateral", "Bilateral", "Unilateral"], },
+                    { v: 500, q: "In the standard anatomical position, the palms are facing:", a: "Forward", options: ["Backward", "Inward", "Forward", "Upward"], }
+                ]
+            },
+            {
+                category: "Tissue Lab",
+                questions: [
+                    { v: 100, q: "Which tissue's primary role is rapid diffusion and filtration?", a: "Simple Squamous", options: ["Simple Cuboidal", "Simple Squamous", "Stratified Squamous", "Columnar"], },
+                    { v: 200, q: "Which tissue is characterized by a lack of blood vessels and a dense matrix of collagen?", a: "Cartilage", options: ["Muscle", "Adipose", "Cartilage", "Epithelium"], },
+                    { v: 300, q: "What structure anchors epithelial tissue to the underlying connective tissue?", a: "Basement Membrane", options: ["Tight Junction", "Basement Membrane", "Desmosome", "Gap Junction"], },
+                    { v: 400, q: "Which muscle tissue is non-striated and found in the walls of hollow organs?", a: "Smooth Muscle", options: ["Skeletal Muscle", "Cardiac Muscle", "Smooth Muscle", "Dense Regular"], },
+                    { v: 500, q: "Which specific tissue is found in the respiratory tract and looks layered but is not?", a: "Pseudostratified Columnar", options: ["Stratified Squamous", "Simple Columnar", "Pseudostratified Columnar", "Transitional"], }
+                ]
+            },
+            {
+                category: "Slicing & Cavities",
+                questions: [
+                    { v: 100, q: "Which plane would you use to separate the body into a front and a back half?", a: "Frontal", options: ["Frontal", "Sagittal", "Transverse", "Oblique"], },
+                    { v: 200, q: "The 'Umbilical region' is located in which general cavity?", a: "Abdominopelvic", options: ["Thoracic", "Pelvic", "Abdominopelvic", "Cranial"], },
+                    { v: 300, q: "What is the name of the double-walled sac that surrounds the heart?", a: "Pericardium", options: ["Pleura", "Peritoneum", "Pericardium", "Meninges"], },
+                    { v: 400, q: "The space between the two lungs containing the heart is known as the:", a: "Mediastinum", options: ["Pleural Cavity", "Mediastinum", "Pericardial Cavity", "Thoracic Outlet"], },
+                    { v: 500, q: "Organs located 'behind' the peritoneum, such as the kidneys, are called:", a: "Retroperitoneal", options: ["Intraperitoneal", "Retroperitoneal", "Subperitoneal", "Transperitoneal"], }
+                ]
+            },
+            {
+                category: "Bio-Chemistry",
+                questions: [
+                    { v: 100, q: "The tendency of an atom to attract electrons toward itself is called:", a: "Electronegativity", options: ["Ionization", "Electronegativity", "Valence", "Covalent Charge"], },
+                    { v: 200, q: "A molecule that does not dissolve in water is likely to be:", a: "Non-polar", options: ["Polar", "Non-polar", "Ionic", "Hydrophilic"], },
+                    { v: 300, q: "Which type of hydrocarbon contains only single bonds between carbon atoms?", a: "Alkane", options: ["Alkane", "Alkene", "Alkyne", "Aromatic"], },
+                    { v: 400, q: "What happens to the boiling point of a hydrocarbon as the chain length increases?", a: "It increases", options: ["It decreases", "It increases", "It stays same", "It disappears"], },
+                    { v: 500, q: "Which element serves as the 'backbone' for almost all biological molecules?", a: "Carbon", options: ["Oxygen", "Hydrogen", "Carbon", "Nitrogen"], }
+                ]
+            },
+            {
+                category: "Medical Mishaps",
+                questions: [
+                    { v: 100, q: "Why did the heart break up with the lungs?", a: "They were too breathless", options: ["They were too breathless", "He was too cold", "She was too loud", "No reason"], },
+                    { v: 200, q: "Why are neurons so bad at keeping secrets?", a: "They always leak information", options: ["They are too small", "They always leak information", "They forget things", "They talk too fast"], },
+                    { v: 300, q: "What did the liver say to the gallbladder?", a: "You're just a bitter little thing", options: ["I love you", "You're just a bitter little thing", "Get out of my way", "Stop leaking"], },
+                    { v: 400, q: "Why was the kidney so stressed at work?", a: "He was under too much pressure", options: ["Too many patients", "He was under too much pressure", "The boss was mean", "He was tired"], },
+                    { v: 500, q: "What's a doctor's favorite kind of music?", a: "Hip-hop (The bone kind)", options: ["Classical", "Hip-hop (The bone kind)", "Jazz", "Pop"], }
+                ]
+            }
+        ];
+
+        function initBoard() {
+            const board = document.getElementById('gameBoard');
+            gameData.forEach(cat => {
+                const div = document.createElement('div');
+                div.className = 'category';
+                div.textContent = cat.category;
+                board.appendChild(div);
+            });
+
+            for (let i = 0; i < 5; i++) {
+                gameData.forEach((cat) => {
+                    const qData = cat.questions[i];
+                    const div = document.createElement('div');
+                    div.className = 'question-cell';
+                    div.textContent = `$${qData.v}`;
+                    div.onclick = () => openQuestion(qData, div);
+                    board.appendChild(div);
+                });
+            }
+        }
+
+        function openQuestion(data, element) {
+            if (element.classList.contains('answered')) return;
+
+            document.getElementById('questionText').textContent = data.q;
+            document.getElementById('feedbackText').textContent = ""; 
+            const grid = document.getElementById('optionsGrid');
+            grid.innerHTML = '';
+            
+            const shuffled = [...data.options].sort(() => Math.random() - 0.5);
+
+            shuffled.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = opt;
+                btn.onclick = () => {
+                    const feedback = document.getElementById('feedbackText');
+                    if (opt.toLowerCase().trim() === data.a.toLowerCase().trim()) {
+                        btn.classList.add('correct');
+                        currentScore += data.v;
+                        feedback.textContent = `+$${data.v}`;
+                        feedback.style.color = "#00FF00";
+                    } else {
+                        btn.classList.add('wrong');
+                        currentScore -= data.v;
+                        feedback.textContent = `-$${data.v}`;
+                        feedback.style.color = "#FF0000";
+                    }
+                    document.getElementById('score').textContent = currentScore;
+                    
+                    document.querySelectorAll('.option-btn').forEach(b => {
+                        b.disabled = true;
+                        if(b.textContent.toLowerCase().trim() === data.a.toLowerCase().trim()) b.classList.add('correct');
+                    });
+                    element.classList.add('answered');
+                    document.getElementById('closeModal').style.display = 'block';
+                };
+                grid.appendChild(btn);
+            });
+
+            document.getElementById('questionModal').style.display = 'flex';
+            document.getElementById('closeModal').style.display = 'none';
+        }
+
+        function closeModal() {
+            document.getElementById('questionModal').style.display = 'none';
+        }
+
+        function openFinal() {
+            document.getElementById('questionText').textContent = "FINAL CHALLENGE: Imagine a hydrocarbon chain with a carbon-carbon double bond. What is the specific name for this category of hydrocarbon, and how does its reactivity differ from an alkane?";
+            document.getElementById('feedbackText').textContent = ""; 
+            
+            const grid = document.getElementById('optionsGrid');
+            grid.innerHTML = '';
+            
+            const revealBtn = document.createElement('button');
+            revealBtn.className = 'reveal-btn';
+            revealBtn.textContent = 'REVEAL ANSWER';
+            revealBtn.onclick = () => {
+                grid.innerHTML = '<div style="font-size: 2.2vw; font-weight: bold; color: #FFD700; text-align: center">Correct Answer: 1. Alkenes. 2. They are more reactive because the double bond can be broken to add other atoms.</div>';
+                document.getElementById('closeModal').style.display = 'block';
+            };
+            
+            grid.appendChild(revealBtn);
+            document.getElementById('closeModal').style.display = 'none';
+            document.getElementById('questionModal').style.display = 'flex';
+        }
+
+        document.addEventListener('DOMContentLoaded', initBoard);
+    </script>
+</body>
+</html>
